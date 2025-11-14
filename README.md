@@ -1,4 +1,4 @@
-# 2D AABB Dataset Generator
+# Collision Detection
 
 This repository includes a Python script to generate static single-frame datasets of 2D AABBs for broad-phase collision detection benchmarks.
 
