@@ -3,6 +3,11 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#ifdef _WIN32
+    #include <direct.h>
+#else
+    #include <sys/stat.h>
+#endif
 
 namespace aabb {
 
@@ -87,6 +92,18 @@ bool read_soa(
 
 bool write_pairs_csv(const std::string &path, const std::vector<std::pair<uint32_t, uint32_t>> &pairs, std::string &err) {
     err.clear();
+    
+    // If directory does not exist, create it
+    size_t last_slash = path.find_last_of("/\\");
+    if (last_slash != std::string::npos) {
+        std::string dir = path.substr(0, last_slash);
+        #ifdef _WIN32
+            _mkdir(dir.c_str());
+        #else
+            mkdir(dir.c_str(), 0755);
+        #endif
+    }
+
     std::ofstream out(path, std::ios::out);
     if (!out) {
         err = "failed to open output file: " + path;

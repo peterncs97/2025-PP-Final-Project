@@ -7,17 +7,17 @@ This repository includes a Python script to generate static single-frame dataset
 
 ## Quick start
 
-```powershell
+```
 # Generate SoA binary (testcase/aabbs_soa.bin)
-python .\gen.py --n 10000 --width 10000 --height 10000 --min-size 0.5 --max-size 4 --distribution uniform --out testcase\aabbs --seed 42
+python ./gen.py --n 10000 --width 10000 --height 10000 --min-size 0.5 --max-size 4 --distribution uniform --out testcase/aabbs --seed 42
 ```
 
 ## Visualize a dataset
 
 Render the SoA dataset to a PNG image:
 
-```powershell
-python .\viz.py --in .\testcase\aabbs.bin --out .\testcase\aabbs_from_soa.png --dpi 160
+```
+python ./viz.py --in ./testcase/aabbs.bin --out ./testcase/aabbs_from_soa.png --dpi 160
 ```
 
 Notes:

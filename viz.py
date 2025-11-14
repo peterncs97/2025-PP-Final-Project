@@ -8,8 +8,6 @@ Supported input:
 Saves a PNG image with rectangles drawn in world coordinates.
 """
 
-from __future__ import annotations
-
 import argparse
 import os
 from typing import Tuple
