@@ -1,0 +1,108 @@
+\documentclass[12pt, a4paper]{article}
+% {
+  \usepackage{amssymb}
+  \usepackage{amsmath}
+  \usepackage{algorithm}
+  \usepackage[noend]{algpseudocode}
+  \usepackage{tabularx}
+  \usepackage{array}
+  \usepackage{listings}
+  \usepackage{xurl}
+  \usepackage[table]{xcolor}
+  \usepackage{CJKutf8}
+  \usepackage{graphicx}
+  \usepackage{nicematrix}
+  \usepackage{stmaryrd}
+  \graphicspath{ {./images/} }
+  \makeatletter
+  \let\OldStatex\Statex
+  \renewcommand{\Statex}[1][3]{%
+    \setlength\@tempdima{\algorithmicindent}%
+    \OldStatex\hskip\dimexpr#1\@tempdima\relax}
+  \makeatother
+  \usepackage[normalem]{ulem}
+  \usepackage[skip=10pt plus1pt, indent=20pt]{parskip}
+  \usepackage{tikz} 
+  \usepackage{diagbox}
+  \usepackage{geometry}
+  \geometry{a4paper, margin=1in}
+  \usepackage{indentfirst}
+  \setlength{\parindent}{2em}
+  \setcounter{topnumber}{8}
+  \setcounter{bottomnumber}{8}
+  \setcounter{totalnumber}{8}
+
+  \definecolor{codegreen}{rgb}{0,0.6,0}
+  \definecolor{codegray}{rgb}{0.5,0.5,0.5}
+  \definecolor{codepurple}{rgb}{0.58,0,0.82}
+  \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+  \lstdefinestyle{mystyle}{
+      backgroundcolor=\color{backcolour},   
+      commentstyle=\color{codegreen},
+      keywordstyle=\color{magenta},
+      numberstyle=\tiny\color{codegray},
+      stringstyle=\color{codepurple},
+      basicstyle=\ttfamily\footnotesize,
+      breakatwhitespace=false,         
+      breaklines=true,                 
+      captionpos=b,                    
+      keepspaces=true,                 
+      numbers=left,                    
+      numbersep=5pt,                  
+      showspaces=false,                
+      showstringspaces=false,
+      showtabs=false,                  
+      tabsize=2
+  }
+  \lstset{style=mystyle}
+  \newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+  \def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+% }
+
+% {
+  \title{PP Final Project Proposal}
+  \author{
+      NG, CHUN-SING (b11902117)
+      \and
+      LIN, GUAN-CHEN (b12902154)
+      \and
+      YU, SHENG (r14922110)
+  }
+  \begin{document}
+  \maketitle
+% }
+\section{Motivation}
+Real-time interactive systems such as games, physics-based simulations, CAD editors, and emerging AR/VR platforms rely on rapid broad-phase collision detection to prune vast numbers of object pairs before precise (and expensive) narrow-phase tests. As scene scale and object count grow (e.g., particle systems, crowd simulations, destructible environments), naive all-pairs checking becomes prohibitively expensive $(O(n^2))$. Efficient broad-phase algorithms like Spatial Hashing and Sort-and-Sweep drastically reduce the search space and expose clear avenues for parallelization. Exploring their sequential and parallel implementations in 2D enables us to study core performance engineering topics (data locality, contention, prefix sums, parallel sorting) that align directly with the course's focus on practical parallel programming. A compact 2D setting keeps geometric complexity manageable while still surfacing algorithmic trade-offs, enabling rigorous benchmarking and insightful analysis of scalability, work efficiency, and load balance.
+
+\section{Topic}
+\textbf{Collision detection} is a critical aspect of computer graphics and physics simulations. The primary goal of collision detection is to determine whether two or more objects intersect. The detection process is typically divided into two phases. The broad phase quickly identifies potential collisions using simplified bounding volumes, while the narrow phase performs precise calculations to confirm actual collisions.
+
+\textbf{Major algorithms}. Efficient collision detection algorithms are essential for real-time applications. A naive approach to collision detection involves checking every pair of objects for intersection, which can be computationally expensive when there are many objects. Therefore, various algorithms have been proposed to reduce the number of collision checks and improve efficiency. Some of the major algorithms include:
+\begin{itemize}
+  \item \textbf{Spatial Hashing}: This algorithm divides the simulation space into a grid of cells and assigns objects to these cells based on their positions. By checking only for collisions within the same or neighboring cells, spatial hashing significantly reduces the number of collision checks.
+  \item \textbf{Sort-and-Sweep}: This algorithm sorts objects along one or more axes and identifies potential collisions based on overlapping intervals. By maintaining a sorted list of objects, Sort-and-Sweep can quickly identify pairs of objects that may collide.
+  \item \textbf{Bounding Volume Hierarchies (BVH)}: This algorithm organizes objects into a tree structure based on their bounding volumes. By hierarchically grouping objects, BVH allows for efficient culling of non-colliding objects, reducing the number of collision checks required.
+\end{itemize}
+
+\section{Project Scope}
+In this project, we aim to implement the \textbf{broad phase} of collision detection on \textbf{2D} objects. We will focus on two major algorithms: \textbf{Spatial Hashing} and \textbf{Sort-and-Sweep}. The implementation will involve both the sequential and parallel versions of these two algorithms. We will evaluate the performance of our implementations using synthetic datasets with varying numbers of objects and distributions.
+
+\section{Objectives}
+We expect to achieve the following objectives in this project:
+\begin{itemize}
+  \item Implement the sequential and parallel versions of Spatial Hashing and Sort-and-Sweep algorithms for 2D collision detection.
+  \item Evaluate the performance of our implementations using synthetic datasets with varying numbers of objects and distributions.
+  \item For Sort-and-Sweep, study parallel sorting algorithms.
+  \item For Spatial Hashing, practice parallel scan or prefix sum techniques.
+  \item Investigate the trade-offs between different algorithms and their parallel implementations.
+\end{itemize}
+
+\section{Schedule and Implementation Plan}
+\includegraphics[scale=0.6]{wbs.png}
+
+\section{Reference}
+\begin{itemize}
+  \item Thinking Parallel, Part I: Collision Detection on the GPU. \url{https://developer.nvidia.com/blog/thinking-parallel-part-i-collision-detection-gpu/}
+\end{itemize}
+
+\end{document}
