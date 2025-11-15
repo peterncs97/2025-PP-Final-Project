@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     } else if (algorithm == "sort_and_sweep") {
         pairs = sort_and_sweep(N, boxes);
     } else if (algorithm == "spatial_hashing") {
-        pairs = spatial_hashing(N, boxes);
+        pairs = spatial_hashing(boxes);
     } else {
         std::cerr << "Unknown algorithm: " << algorithm << '\n';
         return 4;
