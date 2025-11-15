@@ -28,16 +28,16 @@ sbatch scripts/run_seq.sh <algorithm> <testcase number>
 ## Sequential implementation benchmarks
 | Testcase | Distribution                | Sort-and-Sweep Time (s) | Spatial Hashing Time (s) |
 |----------|-----------------------------|-------------------------|--------------------------|
-| 11       | Sparse uniform 			 | **0.0707318**           | 0.182031                 |
-| 12       | Dense uniform  			 | 0.245062                | **0.202064**             |
-| 13       | Clustered medium occupancy  | 0.571056                | **0.469553**             |
-| 14       | Packed high-overlap 		 | 0.198852                | **0.0820178**            |
-| 15       | Grid low-overlap baseline 	 | **0.0948492**           | 0.138924                 |
-| 16       | Skewed sizes few huge boxes | **0.0918866**           | 0.234356                 |
-| 17       | Wide world 				 | **0.0484513**           | 0.321353                 |
-| 18       | Tall world 				 | 14.8628                 | **0.101607**             |
-| 19       | Packed + skewed 			 | **0.220941**            | 0.26452                  |
-| 20       | Moderate occupancy 		 | **0.393519**            | 0.799517                 |
+| 11       | Sparse uniform 			 | 0.0707318           	   | 0.289908                 |
+| 12       | Dense uniform  			 | 0.245062                | 0.113961             	  |
+| 13       | Clustered medium occupancy  | 0.571056                | 0.185043            	  |
+| 14       | Packed high-overlap 		 | 0.198852                | 0.0464638                |
+| 15       | Grid low-overlap baseline 	 | 0.0948492               | 0.139919                 |
+| 16       | Skewed sizes few huge boxes | 0.0918866               | 0.17984                  |
+| 17       | Wide world 				 | 0.0484513               | 0.167596                 |
+| 18       | Tall world 				 | 14.8628                 | 0.169694                 |
+| 19       | Packed + skewed 			 | 0.220941                | 0.199657                 |
+| 20       | Moderate occupancy 		 | 0.393519                | 0.336246                 |
 
 Noted that SS run very slow on testcase 18 due to extreme aspect ratio. The implementation sweeps along the X-axis, which has very long intervals due to the tall world.
 

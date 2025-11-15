@@ -1,5 +1,4 @@
 #include <unordered_map>
-#include <set>
 #include <cmath>
 #include <algorithm>
 
@@ -108,7 +107,8 @@ std::vector<std::pair<uint32_t,uint32_t>> spatial_hashing(
     auto grid = build_grid(boxes, L);
 
     // 3) Detect collisions
-    std::set<std::pair<uint32_t,uint32_t>> pair_set;
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
+    pairs.reserve(64);
 
     // Check 3x3 neighboring cells (including own cell)
     for (const auto& kv : grid) {
@@ -122,14 +122,12 @@ std::vector<std::pair<uint32_t,uint32_t>> spatial_hashing(
             for (const auto* box_b_ptr : neighbor_boxes) {
                 if (box_a_ptr->id >= box_b_ptr->id) continue; // ensure i<j
                 if (!intersects(*box_a_ptr, *box_b_ptr)) continue;
-                pair_set.emplace(box_a_ptr->id, box_b_ptr->id);
+                pairs.emplace_back(box_a_ptr->id, box_b_ptr->id);
             }
         }
     }
 
-    // Convert set to vector
-    std::vector<std::pair<uint32_t,uint32_t>> pairs;
-    pairs.reserve(pair_set.size());
-    for (const auto& p : pair_set) pairs.push_back(p);
+    std::sort(pairs.begin(), pairs.end());
+    pairs.erase(std::unique(pairs.begin(), pairs.end()), pairs.end());
     return pairs;
 }
