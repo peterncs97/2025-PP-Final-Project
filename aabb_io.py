@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Utilities for reading AABB SoA binary files (AASO).
+Utilities for reading AABB plain text files.
 
 Provides a small, dependency-free reader that other scripts can import.
 """

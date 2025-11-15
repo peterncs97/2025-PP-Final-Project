@@ -1,8 +1,8 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Iinclude -Wall -Wextra
 
-SRCS = src/aabb_io.cpp src/brute.cpp
-TARGET = bin/brute
+SRCS = src/aabb_io.cpp src/seq.cpp
+TARGET = bin/seq
 
 all: $(TARGET)
 

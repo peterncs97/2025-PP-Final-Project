@@ -31,6 +31,13 @@ python ./gen.py --n 100 --width 100 --height 100 --min-size 0.5 --max-size 4 --d
 - Boxes are generated entirely within `[0,width] x [0,height]` and may overlap (broad-phase friendly).
 - If `max-size` exceeds the world bounds, it’s reduced to fit; `min-size` is adjusted if necessary to keep `min <= max`.
 
+## Testcases
+Pre-generated testcases are available in the `testcase/` directory for convenience.
+| Filename        | Description |
+|-----------------|-------------|
+| `testcase/1.in` | 100 boxes, uniform distribution |
+| `testcase/2-6.in` | hand-crafted edge cases |
+
 ## Visualize a dataset
 
 Render the dataset to a PNG image:
