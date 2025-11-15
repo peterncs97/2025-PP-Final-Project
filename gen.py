@@ -6,7 +6,7 @@ import random
 import struct
 from typing import List, Tuple
 
-from aabb_io import write_soa_bin
+from aabb_io import write_boxes
 
 Box = Tuple[float, float, float, float]  # (min_x, min_y, max_x, max_y)
 
@@ -111,7 +111,7 @@ def parse_args() -> argparse.Namespace:
 	p.add_argument(
 		"--out",
 		type=str,
-		default=os.path.join("testcase", "aabbs"),
+		default=os.path.join("testcase", "0.in"),
 		help="Output file base path (without extension)",
 	)
 	return p.parse_args()
@@ -147,11 +147,11 @@ def main() -> None:
 	else:  # clustered
 		boxes = gen_clustered(args.n, args.width, args.height, args.min_size, args.max_size)
 
-	# store boxes as SoA binary
+	# store boxes as .txt
 	base = args.out
-	write_soa_bin(base + ".bin", boxes, width=args.width, height=args.height)
+	write_boxes(base + ".in", boxes)
 	print(f"Generated {len(boxes)} AABBs in world {args.width}x{args.height} using {args.distribution} distribution")
-	print(f"Outputs: {base}.bin")
+	print(f"Outputs: {base}.in")
 
 
 if __name__ == "__main__":

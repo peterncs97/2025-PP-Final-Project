@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Compare two CSVs of id pairs and check whether the pairs are the same (order-insensitive).
+"""Compare two text files of id pairs and check whether the pairs are the same (order-insensitive).
 
-Usage: judge.py expected.csv actual.csv
+Usage: judge.py expected.out actual.out
 Exit code 0 if they match, 2 if they differ.
 """
 import os
@@ -9,42 +9,23 @@ import argparse
 import csv
 import sys
 from collections import Counter
+from aabb_io import read_pairs
 
-
-def read_pairs(path):
-    """Read pairs from a CSV file and return a Counter of normalized pairs.
-
-    Normalization: each pair is sorted (so (a,b) == (b,a)).
-    Handles an optional header if the first row starts with 'id'.
-    """
-    pairs = []
-    with open(path, newline="") as f:
-        reader = csv.reader(f)
-        rows = list(reader)
-    if not rows:
-        return Counter()
-    # detect header like: id1,id2
-    start = 0
-    first = rows[0]
-    if len(first) >= 2 and first[0].strip().lower().startswith("id") and first[1].strip().lower().startswith("id"):
-        start = 1
-    for r in rows[start:]:
-        if not r or all(cell.strip() == "" for cell in r):
-            continue
-        a = r[0].strip()
-        b = r[1].strip() if len(r) > 1 else ""
+def count_normalized_pairs(pairs):
+    """Count occurrences of normalized pairs."""
+    counter = Counter()
+    for a, b in pairs:
         norm = tuple(sorted((a, b)))
-        pairs.append(norm)
-    return Counter(pairs)
-
+        counter[norm] += 1
+    return counter
 
 def main():
-    p = argparse.ArgumentParser(description="Compare two CSVs of id pairs (order-insensitive)")
+    p = argparse.ArgumentParser(description="Compare two text files of id pairs (order-insensitive)")
     p.add_argument("testcase", help="testcase number")
     args = p.parse_args()
 
-    exp_file = f"testcase/{args.testcase}.csv"
-    act_file = f"out/{args.testcase}.csv"
+    exp_file = f"testcase/{args.testcase}.out"
+    act_file = f"out/{args.testcase}.out"
     
     # Check if files exist
     if not os.path.isfile(exp_file):
@@ -54,8 +35,8 @@ def main():
         print(f"Actual file not found: {act_file}")
         return 1
     
-    exp = read_pairs(exp_file)
-    act = read_pairs(act_file)
+    exp = count_normalized_pairs(read_pairs(exp_file))
+    act = count_normalized_pairs(read_pairs(act_file))
     if exp == act:
         print("OK: pairs match")
         return 0
@@ -64,14 +45,15 @@ def main():
     missing = exp - act
     extra = act - exp
 
+    # print 5 differences each
     if missing:
         print("Missing from actual:")
-        for (a, b), cnt in missing.items():
-            print(f"  {a},{b}  x{cnt}")
+        for (a, b), cnt in list(missing.items())[:5]:
+            print(f"  {a},{b}")
     if extra:
         print("Extra in actual:")
-        for (a, b), cnt in extra.items():
-            print(f"  {a},{b}  x{cnt}")
+        for (a, b), cnt in list(extra.items())[:5]:
+            print(f"  {a},{b}")
 
     return 2
 
