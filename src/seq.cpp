@@ -38,14 +38,15 @@ int main(int argc, char **argv) {
     // Select and run the algorithm
     std::string algorithm = argv[1];
     std::vector<std::pair<uint32_t, uint32_t>> pairs;
-    if (algorithm == "bruteforce") {
+    if (algorithm == "BF") {
         pairs = brute_force(N, boxes);
-    } else if (algorithm == "sort_and_sweep") {
+    } else if (algorithm == "SS") {
         pairs = sort_and_sweep(N, boxes);
-    } else if (algorithm == "spatial_hashing") {
+    } else if (algorithm == "SH") {
         pairs = spatial_hashing(boxes);
     } else {
         std::cerr << "Unknown algorithm: " << algorithm << '\n';
+        std::cerr << "Valid options are: BF, SS, SH\n";
         return 4;
     }
 
