@@ -41,6 +41,41 @@ sbatch scripts/run_seq.sh <algorithm> <testcase number>
 
 Noted that SS run very slow on testcase 18 due to extreme aspect ratio. The implementation sweeps along the X-axis, which has very long intervals due to the tall world.
 
+# CUDA Parallel Algorithms
+The following CUDA parallel broad-phase collision detection algorithms are implemented:
+- Sort-and-Sweep (SS)
+- Spatial Hashing (SH)
+
+## Execution
+To compile and run the CUDA implementations, use the following commands:
+```
+make
+./bin/cuda <algorithm> <testcase number>
+```
+Replace `<algorithm>` with one of `SS` or `SH`, and `<testcase number>` with the number of the dataset file.
+
+Example:
+```
+./bin/cuda SS 1
+```
+
+Run with slurm for large testcases:
+```
+sbatch scripts/run_cuda.sh <algorithm> <testcase number>
+```
+
+## CUDA Sort-and-Sweep Algorithm
+The CUDA sort-and-sweep implementation follows a three-step parallel approach:
+
+1. **Step 1 - Create Endpoints**: Launch one thread per AABB to calculate its bounding box, project it to the X-axis, and write the start (min_x) and end (max_x) points into fixed locations in the output array.
+
+2. **Step 2 - Parallel Sort**: Sort the endpoint array into ascending order using Thrust's parallel radix sort, yielding linear execution time with respect to the number of objects (given sufficient GPU occupancy).
+
+3. **Step 3 - Sweep and Test**: Launch one thread per array element. If the element indicates an end point, the thread exits. If it indicates a start point, the thread walks the array forward, performing overlap tests (Y-axis check), until it encounters the corresponding end point.
+
+## CUDA Spatial Hashing Algorithm
+The CUDA spatial hashing implementation uses a uniform grid to accelerate collision detection by only testing pairs of AABBs that share the same grid cell.
+
 # Dataset
 
 ## Dataset Format
