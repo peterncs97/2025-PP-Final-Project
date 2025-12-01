@@ -10,11 +10,12 @@
 
 #include "cuda_sort_and_sweep.cuh"
 
-// Point structure for sweep line algorithm
-struct Point {
-    float value;
-    uint32_t index;
-    bool is_start;
+// Endpoint structure for sort-and-sweep algorithm
+// Each AABB generates two endpoints: start (min_x) and end (max_x)
+struct Endpoint {
+    float value;       // The x-coordinate (min_x for start, max_x for end)
+    uint32_t box_idx;  // Index of the AABB this endpoint belongs to
+    uint32_t is_start; // 1 for start point, 0 for end point (use uint32_t for sorting)
 };
 
 // Device-compatible AABB structure
@@ -25,114 +26,113 @@ struct DeviceAABB {
     float max_y;
 };
 
-// Comparator for sorting points
-struct PointComparator {
+// Comparator for sorting endpoints
+// Sort by value ascending; if equal, start points come before end points
+struct EndpointComparator {
     __host__ __device__
-    bool operator()(const Point& a, const Point& b) const {
-        if (a.value == b.value) {
-            return a.is_start && !b.is_start;
+    bool operator()(const Endpoint& a, const Endpoint& b) const {
+        if (a.value != b.value) {
+            return a.value < b.value;
         }
-        return a.value < b.value;
+        // If values are equal, start points (is_start=1) come before end points (is_start=0)
+        return a.is_start > b.is_start;
     }
 };
 
-// Kernel to find overlapping pairs
-// Each thread handles one start point and checks against all active boxes
-__global__ void find_overlaps_kernel(
-    const Point* points,
-    const DeviceAABB* boxes,
-    const uint32_t num_points,
-    uint32_t* pair_first,
-    uint32_t* pair_second,
-    uint32_t* pair_count,
-    const uint32_t max_pairs)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= num_points) return;
-
-    const Point& p = points[idx];
-    if (!p.is_start) return;
-
-    const DeviceAABB& box_b = boxes[p.index];
-
-    // Look backwards to find all active boxes (boxes whose start is before this point
-    // and end is after this point's x value)
-    for (int j = idx - 1; j >= 0; --j) {
-        const Point& prev = points[j];
-        
-        // If we hit an end point, the box might still be active
-        // If we hit a start point, check if its end point is after current x
-        if (prev.is_start) {
-            const DeviceAABB& box_a = boxes[prev.index];
-            
-            // Check if box_a is still active (its max_x >= current x)
-            if (box_a.max_x >= p.value) {
-                // Check y-axis overlap
-                if (box_a.min_y <= box_b.max_y && box_a.max_y >= box_b.min_y) {
-                    // Add pair (smaller index first)
-                    uint32_t a = prev.index;
-                    uint32_t b = p.index;
-                    if (a > b) {
-                        uint32_t tmp = a;
-                        a = b;
-                        b = tmp;
-                    }
-                    
-                    uint32_t pos = atomicAdd(pair_count, 1);
-                    if (pos < max_pairs) {
-                        pair_first[pos] = a;
-                        pair_second[pos] = b;
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Alternative: Simpler kernel that checks all pairs in parallel
-__global__ void find_all_overlaps_kernel(
+// Step 1 Kernel: Create endpoints from AABBs
+// Each thread handles one AABB and writes its start and end points
+__global__ void create_endpoints_kernel(
     const DeviceAABB* boxes,
     const uint32_t N,
+    Endpoint* endpoints)
+{
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N) return;
+
+    const DeviceAABB& box = boxes[idx];
+    
+    // Write start point at index 2*idx
+    endpoints[2 * idx].value = box.min_x;
+    endpoints[2 * idx].box_idx = idx;
+    endpoints[2 * idx].is_start = 1;
+    
+    // Write end point at index 2*idx + 1
+    endpoints[2 * idx + 1].value = box.max_x;
+    endpoints[2 * idx + 1].box_idx = idx;
+    endpoints[2 * idx + 1].is_start = 0;
+}
+
+// Step 3 Kernel: Find overlapping pairs
+// Each thread handles one endpoint in the sorted array
+// If it's an end point, exit immediately
+// If it's a start point, walk forward and test overlaps until hitting the corresponding end point
+__global__ void sweep_find_overlaps_kernel(
+    const Endpoint* endpoints,
+    const DeviceAABB* boxes,
+    const uint32_t num_endpoints,
     uint32_t* pair_first,
     uint32_t* pair_second,
     uint32_t* pair_count,
     const uint32_t max_pairs)
 {
-    // Each thread handles one pair (i, j) where i < j
-    uint64_t idx = (uint64_t)blockIdx.x * blockDim.x + threadIdx.x;
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_endpoints) return;
+
+    const Endpoint& ep = endpoints[idx];
     
-    // Convert linear index to pair (i, j)
-    // Total pairs = N*(N-1)/2
-    // idx = i*N - i*(i+1)/2 + (j - i - 1)
-    // We use a simpler iteration scheme
+    // If this is an end point, exit immediately
+    if (ep.is_start == 0) return;
     
-    uint64_t total_pairs = (uint64_t)N * (N - 1) / 2;
-    if (idx >= total_pairs) return;
+    // This is a start point - get our box
+    const uint32_t my_box_idx = ep.box_idx;
+    const DeviceAABB& my_box = boxes[my_box_idx];
+    const float my_end_x = my_box.max_x;
     
-    // Decode pair index
-    // For pair (i, j) where i < j:
-    // index = sum_{k=0}^{i-1}(N-1-k) + (j - i - 1)
-    //       = i*N - i*(i+1)/2 + (j - i - 1)
-    uint32_t i = 0;
-    uint64_t cumsum = 0;
-    while (cumsum + (N - 1 - i) <= idx) {
-        cumsum += (N - 1 - i);
-        i++;
-    }
-    uint32_t j = i + 1 + (idx - cumsum);
-    
-    const DeviceAABB& a = boxes[i];
-    const DeviceAABB& b = boxes[j];
-    
-    // Check overlap on both axes
-    bool overlap_x = (a.min_x <= b.max_x) && (a.max_x >= b.min_x);
-    bool overlap_y = (a.min_y <= b.max_y) && (a.max_y >= b.min_y);
-    
-    if (overlap_x && overlap_y) {
-        uint32_t pos = atomicAdd(pair_count, 1);
-        if (pos < max_pairs) {
-            pair_first[pos] = i;
-            pair_second[pos] = j;
+    // Walk forward through the sorted array
+    // Test overlaps until we hit our own end point (where value > my_end_x)
+    for (uint32_t j = idx + 1; j < num_endpoints; ++j) {
+        const Endpoint& other_ep = endpoints[j];
+        
+        // Stop when we pass our end point
+        if (other_ep.value > my_end_x) {
+            break;
+        }
+        
+        // Only test against start points of other boxes (avoid duplicates)
+        if (other_ep.is_start == 0) continue;
+        
+        const uint32_t other_box_idx = other_ep.box_idx;
+        
+        // Skip if same box (shouldn't happen but be safe)
+        if (other_box_idx == my_box_idx) continue;
+        
+        const DeviceAABB& other_box = boxes[other_box_idx];
+        
+        // X-axis overlap is guaranteed since:
+        // - other_ep.value (other's min_x) <= my_end_x (my max_x)
+        // - my_box.min_x (current position) <= other_ep.value (other's min_x)
+        // So we only need to check if other's max_x >= my min_x for full x-overlap
+        // But since we're at a start point of other, and we haven't passed our end,
+        // we need to verify x-overlap more carefully
+        
+        // Check y-axis overlap
+        bool overlap_y = (my_box.min_y <= other_box.max_y) && (my_box.max_y >= other_box.min_y);
+        
+        if (overlap_y) {
+            // Ensure pair is ordered (smaller index first)
+            uint32_t a = my_box_idx;
+            uint32_t b = other_box_idx;
+            if (a > b) {
+                uint32_t tmp = a;
+                a = b;
+                b = tmp;
+            }
+            
+            uint32_t pos = atomicAdd(pair_count, 1);
+            if (pos < max_pairs) {
+                pair_first[pos] = a;
+                pair_second[pos] = b;
+            }
         }
     }
 }
@@ -154,12 +154,35 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_sort_and_sweep(
         h_boxes[i].max_y = boxes[i].max_y;
     }
 
-    // Allocate device memory
+    // Allocate device memory for boxes
     DeviceAABB* d_boxes;
     cudaMalloc(&d_boxes, N * sizeof(DeviceAABB));
     cudaMemcpy(d_boxes, h_boxes.data(), N * sizeof(DeviceAABB), cudaMemcpyHostToDevice);
 
-    // Estimate max pairs (worst case is N*(N-1)/2, but we'll use a reasonable limit)
+    // =========================================================================
+    // Step 1: Create endpoints (2 per AABB: start and end)
+    // =========================================================================
+    const uint32_t num_endpoints = 2 * N;
+    Endpoint* d_endpoints;
+    cudaMalloc(&d_endpoints, num_endpoints * sizeof(Endpoint));
+    
+    int block_size = 256;
+    int num_blocks = (N + block_size - 1) / block_size;
+    
+    create_endpoints_kernel<<<num_blocks, block_size>>>(d_boxes, N, d_endpoints);
+    cudaDeviceSynchronize();
+
+    // =========================================================================
+    // Step 2: Sort endpoints using parallel sort (Thrust radix sort)
+    // =========================================================================
+    thrust::device_ptr<Endpoint> endpoints_ptr(d_endpoints);
+    thrust::sort(endpoints_ptr, endpoints_ptr + num_endpoints, EndpointComparator());
+    cudaDeviceSynchronize();
+
+    // =========================================================================
+    // Step 3: Sweep to find overlapping pairs
+    // =========================================================================
+    // Estimate max pairs
     uint64_t total_possible = (uint64_t)N * (N - 1) / 2;
     uint32_t max_pairs = (uint32_t)std::min(total_possible, (uint64_t)100000000);  // 100M max
 
@@ -172,15 +195,13 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_sort_and_sweep(
     cudaMalloc(&d_pair_count, sizeof(uint32_t));
     cudaMemset(d_pair_count, 0, sizeof(uint32_t));
 
-    // Launch kernel
-    int block_size = 256;
-    uint64_t num_checks = total_possible;
-    int num_blocks = (num_checks + block_size - 1) / block_size;
+    // Launch sweep kernel - one thread per endpoint
+    num_blocks = (num_endpoints + block_size - 1) / block_size;
     
-    find_all_overlaps_kernel<<<num_blocks, block_size>>>(
-        d_boxes, N, d_pair_first, d_pair_second, d_pair_count, max_pairs
+    sweep_find_overlaps_kernel<<<num_blocks, block_size>>>(
+        d_endpoints, d_boxes, num_endpoints,
+        d_pair_first, d_pair_second, d_pair_count, max_pairs
     );
-    
     cudaDeviceSynchronize();
 
     // Get pair count
@@ -212,6 +233,7 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_sort_and_sweep(
 
     // Free device memory
     cudaFree(d_boxes);
+    cudaFree(d_endpoints);
     cudaFree(d_pair_first);
     cudaFree(d_pair_second);
     cudaFree(d_pair_count);
