@@ -466,9 +466,6 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
         std::cerr << "[cuda_sh] total_pairs=0\n";
     }
 
-    std::sort(pairs.begin(), pairs.end());
-    pairs.erase(std::unique(pairs.begin(), pairs.end()), pairs.end());
-
     auto t_end = std::chrono::high_resolution_clock::now();
     auto ms = [](auto a, auto b) {
         return std::chrono::duration<double, std::milli>(b - a).count();
