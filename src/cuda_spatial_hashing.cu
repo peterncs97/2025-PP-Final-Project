@@ -313,24 +313,11 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
     auto t_prep = std::chrono::high_resolution_clock::now();
     std::cerr << "[cuda_sh] prep done" << std::endl;
 
-    // 重用 d_pairs buffer
-    static CellBoxPair* d_pairs_raw = nullptr;
-    static size_t d_pairs_capacity = 0;
-    const size_t needed_pairs = static_cast<size_t>(N) * sizeof(CellBoxPair);
-    if (needed_pairs > d_pairs_capacity) {
-        if (d_pairs_raw) cudaFreeAsync(d_pairs_raw, 0);
-        if (!check_cuda(cudaMallocAsync(&d_pairs_raw, needed_pairs, 0), "cudaMallocAsync d_pairs")) {
-            cudaFreeHost(h_boxes);
-            return {};
-        }
-        d_pairs_capacity = needed_pairs;
-    }
-    thrust::device_ptr<CellBoxPair> d_pairs_ptr(d_pairs_raw);
-    thrust::device_ptr<CellBoxPair> d_pairs_end = d_pairs_ptr + N;
+    thrust::device_vector<CellBoxPair> d_pairs(N);
     const int block = 256;
     const int grid = (N + block - 1) / block;
     std::cerr << "[cuda_sh] launch assign kernel" << std::endl;
-    assign_boxes_to_cells_kernel<<<grid, block>>>(d_boxes, N, cell_size, d_pairs_raw);
+    assign_boxes_to_cells_kernel<<<grid, block>>>(d_boxes, N, cell_size, thrust::raw_pointer_cast(d_pairs.data()));
     if (!check_cuda(cudaDeviceSynchronize(), "assign_boxes_to_cells_kernel")) {
         cudaFree(d_boxes);
         return {};
@@ -338,12 +325,12 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
     auto t_assign = std::chrono::high_resolution_clock::now();
     std::cerr << "[cuda_sh] assign done" << std::endl;
 
-    thrust::sort(d_pairs_ptr, d_pairs_ptr + N, CellBoxComparator());
+    thrust::sort(d_pairs.begin(), d_pairs.end(), CellBoxComparator());
     auto t_sort = std::chrono::high_resolution_clock::now();
     std::cerr << "[cuda_sh] sort done" << std::endl;
 
     thrust::device_vector<uint32_t> d_cell_starts_flags(N);
-    find_cell_starts_kernel<<<grid, block>>>(d_pairs_raw, N,
+    find_cell_starts_kernel<<<grid, block>>>(thrust::raw_pointer_cast(d_pairs.data()), N,
                                              thrust::raw_pointer_cast(d_cell_starts_flags.data()));
     if (!check_cuda(cudaDeviceSynchronize(), "find_cell_starts_kernel")) {
         cudaFree(d_boxes);
@@ -381,7 +368,7 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
     if (num_cells > 0) {
         const int grid_cells = (num_cells + block - 1) / block;
         fill_cell_hashes_kernel<<<grid_cells, block>>>(
-            d_pairs_raw,
+            thrust::raw_pointer_cast(d_pairs.data()),
             thrust::raw_pointer_cast(d_cell_starts.data()),
             num_cells,
             thrust::raw_pointer_cast(d_cell_hashes.data()));
@@ -398,7 +385,7 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
         const int grid_cells = (num_cells + block - 1) / block;
         count_collisions_kernel<<<grid_cells, block>>>(
             d_boxes,
-            d_pairs_raw,
+            thrust::raw_pointer_cast(d_pairs.data()),
             thrust::raw_pointer_cast(d_cell_hashes.data()),
             thrust::raw_pointer_cast(d_cell_starts.data()),
             thrust::raw_pointer_cast(d_cell_lengths.data()),
@@ -446,7 +433,7 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
         const int grid_cells = (num_cells + block - 1) / block;
         scatter_collisions_kernel<<<grid_cells, block>>>(
             d_boxes,
-            d_pairs_raw,
+            thrust::raw_pointer_cast(d_pairs.data()),
             thrust::raw_pointer_cast(d_cell_hashes.data()),
             thrust::raw_pointer_cast(d_cell_starts.data()),
             thrust::raw_pointer_cast(d_cell_lengths.data()),
