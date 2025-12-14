@@ -8,6 +8,7 @@
 #include <thrust/scan.h>
 #include <iostream>
 #include <chrono>
+#include <iomanip>
 
 #include "cuda_spatial_hashing.cuh"
 
@@ -454,20 +455,19 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
 
     auto t_end = std::chrono::high_resolution_clock::now();
     auto ms = [](auto a, auto b) {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(b - a).count();
+        return std::chrono::duration<double, std::milli>(b - a).count();
     };
-    std::cerr << "[cuda_sh] timings(ms)"
-              << " prep=" << ms(t0, t_prep)
-              << " assign=" << ms(t_prep, t_assign)
-              << " sort=" << ms(t_assign, t_sort)
-              << " bucket=" << ms(t_sort, t_bucket)
-              << " hashes=" << ms(t_bucket, t_hashes)
-              << " count=" << ms(t_hashes, t_count)
-              << " scan=" << ms(t_count, t_scan)
-              << " scatter=" << ms(t_scan, t_scatter)
-              << " finalize=" << ms(t_scatter, t_end)
-              << " total=" << ms(t0, t_end)
-              << "\n";
+    std::cerr << "[cuda_sh] timings (ms):\n"
+              << "  prep     : " << std::fixed << std::setprecision(3) << ms(t0, t_prep) << "\n"
+              << "  assign   : " << std::fixed << std::setprecision(3) << ms(t_prep, t_assign) << "\n"
+              << "  sort     : " << std::fixed << std::setprecision(3) << ms(t_assign, t_sort) << "\n"
+              << "  bucket   : " << std::fixed << std::setprecision(3) << ms(t_sort, t_bucket) << "\n"
+              << "  hashes   : " << std::fixed << std::setprecision(3) << ms(t_bucket, t_hashes) << "\n"
+              << "  count    : " << std::fixed << std::setprecision(3) << ms(t_hashes, t_count) << "\n"
+              << "  scan     : " << std::fixed << std::setprecision(3) << ms(t_count, t_scan) << "\n"
+              << "  scatter  : " << std::fixed << std::setprecision(3) << ms(t_scan, t_scatter) << "\n"
+              << "  finalize : " << std::fixed << std::setprecision(3) << ms(t_scatter, t_end) << "\n"
+              << "  total    : " << std::fixed << std::setprecision(3) << ms(t0, t_end) << "\n";
 
     cudaFree(d_boxes);
     std::cerr << "[cuda_sh] return pairs=" << pairs.size() << "\n";
