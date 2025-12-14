@@ -290,18 +290,24 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
         h_boxes[i].max_x = boxes[i].max_x;
         h_boxes[i].max_y = boxes[i].max_y;
     }
-    DeviceAABB* d_boxes = nullptr;
-    std::cerr << "[cuda_sh] cudaMalloc d_boxes..." << std::endl;
-    if (!check_cuda(cudaMallocAsync(&d_boxes, N * sizeof(DeviceAABB), 0), "cudaMallocAsync d_boxes")) {
-        return {};
+    // 重用 device buffer
+    static DeviceAABB* d_boxes = nullptr;
+    static size_t d_boxes_capacity = 0;
+    const size_t needed_boxes = static_cast<size_t>(N) * sizeof(DeviceAABB);
+    if (needed_boxes > d_boxes_capacity) {
+        if (d_boxes) cudaFreeAsync(d_boxes, 0);
+        std::cerr << "[cuda_sh] cudaMalloc d_boxes..." << std::endl;
+        if (!check_cuda(cudaMallocAsync(&d_boxes, needed_boxes, 0), "cudaMallocAsync d_boxes")) {
+            cudaFreeHost(h_boxes);
+            return {};
+        }
+        d_boxes_capacity = needed_boxes;
     }
     std::cerr << "[cuda_sh] cudaMemcpy boxes..." << std::endl;
-    if (!check_cuda(cudaMemcpyAsync(d_boxes, h_boxes, N * sizeof(DeviceAABB), cudaMemcpyHostToDevice, 0), "memcpy boxes")) {
+    if (!check_cuda(cudaMemcpyAsync(d_boxes, h_boxes, needed_boxes, cudaMemcpyHostToDevice, 0), "memcpy boxes")) {
         cudaFreeHost(h_boxes);
-        cudaFreeAsync(d_boxes, 0);
         return {};
     }
-    // 同步以確保拷貝完成（後續仍同步執行）
     cudaStreamSynchronize(0);
     cudaFreeHost(h_boxes);
     auto t_prep = std::chrono::high_resolution_clock::now();
