@@ -278,7 +278,11 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
     if (!check_cuda(cudaGetDeviceCount(&dev_count), "cudaGetDeviceCount")) return {};
     std::cerr << "[cuda_sh] device_count=" << dev_count << std::endl;
 
-    std::vector<DeviceAABB> h_boxes(N);
+    // 使用 pinned host memory 提升 H2D 拷貝效率
+    DeviceAABB* h_boxes = nullptr;
+    if (!check_cuda(cudaHostAlloc(&h_boxes, N * sizeof(DeviceAABB), cudaHostAllocDefault), "cudaHostAlloc h_boxes")) {
+        return {};
+    }
     for (uint32_t i = 0; i < N; ++i) {
         h_boxes[i].id = boxes[i].id;
         h_boxes[i].min_x = boxes[i].min_x;
@@ -290,10 +294,12 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
     std::cerr << "[cuda_sh] cudaMalloc d_boxes..." << std::endl;
     if (!check_cuda(cudaMalloc(&d_boxes, N * sizeof(DeviceAABB)), "cudaMalloc d_boxes")) return {};
     std::cerr << "[cuda_sh] cudaMemcpy boxes..." << std::endl;
-    if (!check_cuda(cudaMemcpy(d_boxes, h_boxes.data(), N * sizeof(DeviceAABB), cudaMemcpyHostToDevice), "memcpy boxes")) {
+    if (!check_cuda(cudaMemcpy(d_boxes, h_boxes, N * sizeof(DeviceAABB), cudaMemcpyHostToDevice), "memcpy boxes")) {
+        cudaFreeHost(h_boxes);
         cudaFree(d_boxes);
         return {};
     }
+    cudaFreeHost(h_boxes);
     auto t_prep = std::chrono::high_resolution_clock::now();
     std::cerr << "[cuda_sh] prep done" << std::endl;
 
