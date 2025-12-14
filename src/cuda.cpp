@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
         std::cerr << "Failed to read file: " << err << '\n';
         return 2;
     }
+    std::cout << "Loaded " << boxes.size() << " boxes from " << in_path << "\n";
     const uint32_t N = static_cast<uint32_t>(boxes.size());
 
     // ----------- Detection start ------------
