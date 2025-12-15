@@ -310,6 +310,10 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
     }
     cudaStreamSynchronize(0);
     cudaFreeHost(h_boxes);
+
+    // Record Computation Start Time
+    auto start = std::chrono::high_resolution_clock::now();
+
     auto t_prep = std::chrono::high_resolution_clock::now();
     std::cerr << "[cuda_sh] prep done" << std::endl;
 
@@ -484,5 +488,11 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_spatial_hashing(
 
     cudaFree(d_boxes);
     std::cerr << "[cuda_sh] return pairs=" << pairs.size() << "\n";
+
+    // Record Computation End Time
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Computation Time: " << elapsed.count() << " seconds\n";
+
     return pairs;
 }

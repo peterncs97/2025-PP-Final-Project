@@ -7,6 +7,7 @@
 #include <thrust/sequence.h>
 #include <thrust/remove.h>
 #include <thrust/unique.h>
+#include <chrono>
 
 #include "cuda_sort_and_sweep.cuh"
 
@@ -159,6 +160,9 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_sort_and_sweep(
     cudaMalloc(&d_boxes, N * sizeof(DeviceAABB));
     cudaMemcpy(d_boxes, h_boxes.data(), N * sizeof(DeviceAABB), cudaMemcpyHostToDevice);
 
+    // Record Computation Start Time
+    auto start = std::chrono::high_resolution_clock::now();
+
     // =========================================================================
     // Step 1: Create endpoints (2 per AABB: start and end)
     // =========================================================================
@@ -237,6 +241,11 @@ std::vector<std::pair<uint32_t, uint32_t>> cuda_sort_and_sweep(
     cudaFree(d_pair_first);
     cudaFree(d_pair_second);
     cudaFree(d_pair_count);
+
+    // Record Computation End Time
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Computation Time: " << elapsed.count() << " seconds\n";
 
     return pairs;
 }

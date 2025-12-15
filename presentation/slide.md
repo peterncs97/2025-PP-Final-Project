@@ -57,12 +57,15 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 ![bg right fit](images/uniform-grid.png)
 
 ---
-# Parallelization Strategies
-TODO: mention key strategies used to parallelize each algorithm on the GPU.
+# Benchmark Results
+![center w:1000](images/performance_comparison.png)
 
 ---
-# Benchmark Results
-TODO: compare results here with bar charts or tables.
+# Discussion
+- Memory transfer overhead dominates parallel performance.
+
+- Parallelization prevents worst-case scenarios (e.g., TC18: 15s vs 0.25s).
+- GPU compute consistently under 16ms (60 FPS), indicating high efficiency if data transfer is minimized.
 
 ---
 # Team Members and Work Distribution

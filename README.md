@@ -133,10 +133,7 @@ To generate the large testcases (11–20), use the helper script:
 
 ```
 # generate all 11..20
-scripts/generate_large_testcases.sh
-
-# or generate selected ones
-scripts/generate_large_testcases.sh 12 15 20
+scripts/gen.sh
 ```
 
 Notes:

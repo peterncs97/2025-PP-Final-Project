@@ -40,10 +40,25 @@ def parse_time_from_log(log_path):
         content = f.read()
     
     # Match "Time elapsed: X.XXX seconds" (supports scientific notation like 3.7719e-05)
-    match = re.search(r"Time elapsed:\s*([\d.]+(?:[eE][+-]?\d+)?)\s*seconds", content)
-    if match:
-        return float(match.group(1))
+    total_time_match = re.search(r"Time elapsed:\s*([\d.]+(?:[eE][+-]?\d+)?)\s*seconds", content)
     
+    if total_time_match:
+        return float(total_time_match.group(1))
+    return None
+
+def parse_computation_time_from_log(log_path):
+    """Parse computation time from log file."""
+    if not os.path.exists(log_path):
+        return None
+    
+    with open(log_path, 'r') as f:
+        content = f.read()
+    
+    # Match "Computation Time: X.XXX seconds" (supports scientific notation like 3.7719e-05)
+    compute_time_match = re.search(r"Computation Time:\s*([\d.]+(?:[eE][+-]?\d+)?)\s*seconds", content)
+    
+    if compute_time_match:
+        return float(compute_time_match.group(1))
     return None
 
 
@@ -93,10 +108,23 @@ def run_benchmark(algorithm, testcases):
             
             log_path = os.path.join(log_dir, "{}_{}.out".format(runner, job_id))
             elapsed_time = parse_time_from_log(log_path)
-            results[runner][tc] = elapsed_time
+            compute_time = parse_computation_time_from_log(log_path) if runner == "cuda" else None
+            
+            results[runner][tc] = {
+                "elapsed": elapsed_time,
+                "compute": compute_time
+            }
             
             if elapsed_time is not None:
-                print("  {} testcase {}: {:.6f} seconds".format(runner, tc, elapsed_time))
+                if runner == "cuda":
+                    print("  {} testcase {}: {:.6f} seconds (compute: {})".format(
+                        runner,
+                        tc,
+                        elapsed_time,
+                        "{:.6f}".format(compute_time) if compute_time is not None else "N/A"
+                    ))
+                else:
+                    print("  {} testcase {}: {:.6f} seconds".format(runner, tc, elapsed_time))
             else:
                 print("  {} testcase {}: FAILED (log: {})".format(runner, tc, log_path))
     
@@ -107,16 +135,21 @@ def save_results_to_csv(results, algorithm, testcases, output_path):
     """Save benchmark results to CSV file."""
     with open(output_path, 'w') as f:
         writer = csv.writer(f)
-        writer.writerow(["testcase", "seq_time", "cuda_time"])
+        writer.writerow(["testcase", "seq_total", "cuda_total", "cuda_compute"])
         
         for tc in testcases:
-            seq_time = results["seq"].get(tc)
-            cuda_time = results["cuda"].get(tc)
+            seq_result = results["seq"].get(tc) or {}
+            cuda_result = results["cuda"].get(tc) or {}
+
+            seq_time = seq_result.get("elapsed")
+            cuda_time = cuda_result.get("elapsed")
+            cuda_compute = cuda_result.get("compute")
             
             seq_str = "{:.6f}".format(seq_time) if seq_time is not None else "N/A"
             cuda_str = "{:.6f}".format(cuda_time) if cuda_time is not None else "N/A"
-            
-            writer.writerow([tc, seq_str, cuda_str])
+            cuda_compute_str = "{:.6f}".format(cuda_compute) if cuda_compute is not None else "N/A"
+
+            writer.writerow([tc, seq_str, cuda_str, cuda_compute_str])
     
     print("\nResults saved to: {}".format(output_path))
 
@@ -133,8 +166,8 @@ def main():
     parser.add_argument(
         "--testcases",
         type=str,
-        default="1-6,11-20",
-        help="Testcase list (default: 1-6,11-20)"
+        default="11-20",
+        help="Testcase list (default: 11-20)"
     )
     parser.add_argument(
         "--output",
@@ -176,8 +209,11 @@ def main():
     print("-" * 50)
     
     for tc in testcases:
-        seq_time = results["seq"].get(tc)
-        cuda_time = results["cuda"].get(tc)
+        seq_result = results["seq"].get(tc) or {}
+        cuda_result = results["cuda"].get(tc) or {}
+
+        seq_time = seq_result.get("elapsed")
+        cuda_time = cuda_result.get("compute")
         
         seq_str = "{:.6f}s".format(seq_time) if seq_time is not None else "N/A"
         cuda_str = "{:.6f}s".format(cuda_time) if cuda_time is not None else "N/A"
