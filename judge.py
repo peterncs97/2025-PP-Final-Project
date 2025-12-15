@@ -22,10 +22,19 @@ def count_normalized_pairs(pairs):
 def main():
     p = argparse.ArgumentParser(description="Compare two text files of id pairs (order-insensitive)")
     p.add_argument("testcase", help="testcase number")
+    p.add_argument(
+        "--actual",
+        help="override actual output path (default: out/<testcase>.out; fallback: out/<testcase>_cuda.out)",
+    )
     args = p.parse_args()
 
     exp_file = f"testcase/{args.testcase}.out"
-    act_file = f"out/{args.testcase}.out"
+    # Actual 檔案：優先命令列指定；否則用 out/<testcase>.out；若不存在則嘗試 out/<testcase>_cuda.out
+    act_file = args.actual or f"out/{args.testcase}.out"
+    if not os.path.isfile(act_file):
+        cuda_fallback = f"out/{args.testcase}_cuda.out"
+        if os.path.isfile(cuda_fallback):
+            act_file = cuda_fallback
     
     # Check if files exist
     if not os.path.isfile(exp_file):
@@ -50,6 +59,8 @@ def main():
         print("Missing from actual:")
         for (a, b), cnt in list(missing.items())[:5]:
             print(f"  {a},{b}")
+        if sum(missing.values()) > 5:
+            print(f"... total missing: {sum(missing.values())}")
     if extra:
         print("Extra in actual:")
         for (a, b), cnt in list(extra.items())[:5]:
