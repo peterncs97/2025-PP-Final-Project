@@ -63,9 +63,13 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 ---
 # Discussion
 - Memory transfer overhead dominates parallel performance.
-
 - Parallelization prevents worst-case scenarios (e.g., TC18: 15s vs 0.25s).
 - GPU compute consistently under 16ms (60 FPS), indicating high efficiency if data transfer is minimized.
+
+---
+# Conclusion
+- GPU collision detection excels with GPU-resident physics pipelines.
+- But offers limited benefit when frequent CPU-GPU synchronization is required.
 
 ---
 # Team Members and Work Distribution
