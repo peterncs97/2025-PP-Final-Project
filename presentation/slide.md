@@ -24,16 +24,16 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 
 ---
 # Project Overview
-**Goal: benchmark two broad-phase detection algorithms on both CPU and GPU.**
 
-| Aspect                  | Description                                   |
-|-------------------------|-----------------------------------------------|
-| Scope                   | Broad-phase (simple bounding volumes)         |
-| Bounding Volume         | Axis-Aligned Bounding Boxes (AABB)            |
-| Space                   | 2D                                            |
-| Algorithms              | Sort-and-Sweep, Spatial Hashing               |
-| Implementation          | Sequential and CUDA                           |
-| Benchmark               | 10 custom testcases of 100~200k boxes         |
+**Scope**: 2D bounding box
+**Algorithms**: 
+  - Sort-and-Sweep
+  - Spatial Hashing
+
+**Implementation**: CPU and GPU
+**Benchmark**: 10 custom testcases of 100k~200k boxes
+
+![bg right fit](images/AABB.png)
 
 ---
 # Sort-and-Sweep
@@ -75,6 +75,9 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 | Sequential Implementations | CHUN-SING, NG (b11902117)         |
 | CUDA Sort-and-Sweep     | GUAN-CHEN, LIN (b12902154)          |
 | CUDA Spatial Hashing    | SHENG, YU (r14922110)               |
+| Report Writing          | CHUN-SING, NG (b11902117)           |
+| Slide Preparation       | CHUN-SING, NG (b11902117)           |
+| Presentation            | SHENG, YU (r14922110)               |
 
 ---
 # References

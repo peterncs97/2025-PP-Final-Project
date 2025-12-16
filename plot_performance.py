@@ -31,6 +31,22 @@ def plot_performance():
     # Get all unique testcases and sort them numerically
     all_testcases = set(ss_data.keys()) | set(sh_data.keys())
     testcases = sorted(list(all_testcases), key=lambda x: int(x))
+    
+    # Map testcase numbers to names
+    testcase_names = {
+        '11': 'TC11\nSparse',
+        '12': 'TC12\nDense',
+        '13': 'TC13\nClustered',
+        '14': 'TC14\nPacked',
+        '15': 'TC15\nGrid',
+        '16': 'TC16\nSkewed Object Size',
+        '17': 'TC17\nWide World',
+        '18': 'TC18\nTall World',
+        '19': 'TC19\nPacked + Skewed',
+        '20': 'TC20\nModerate Occupancy'
+    }
+    
+    testcase_labels = [testcase_names.get(tc, tc) for tc in testcases]
 
     # Prepare data arrays
     ss_seq = []
@@ -116,7 +132,7 @@ def plot_performance():
     ax.set_xlabel('Testcase')
     ax.set_title('Performance Comparison: Sort-and-Sweep (SS) vs Spatial Hashing (SH)')
     ax.set_xticks(x)
-    ax.set_xticklabels(testcases)
+    ax.set_xticklabels(testcase_labels, fontsize=9)
     ax.legend()
     
     ax.grid(True, which='both', axis='y', linestyle='--', alpha=0.7)
