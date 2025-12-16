@@ -1,6 +1,20 @@
 # Collision Detection
 This repository contains code for generating datasets of 2D axis-aligned bounding boxes (AABBs) and implementing various collision detection algorithms to find overlapping box pairs.
 
+# TL;DR
+To compile and run the experiment for a collision detection algorithm, use:
+```
+make
+python performance.py <algorithm>
+```
+Replace `<algorithm>` with one of `SS`, `SH`, standing for Sort-and-Sweep and Spatial Hashing respectively.
+
+The script submit two jobs for each of the 10 testcases, one for the sequential version and one for the parallel version.
+
+The execution time is record in the `log/` folder. The output pairs are stored in the `out/` folder.
+
+A csv file `performance.csv` will be generated to summarize the execution time of an algorithm on all testcases.
+
 # Sequential Broad-Phase Algorithms
 The following sequential broad-phase collision detection algorithms are implemented:
 - Brute Force (BF)
