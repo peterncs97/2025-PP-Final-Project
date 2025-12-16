@@ -1,0 +1,203 @@
+\documentclass[12pt, a4paper]{article}
+% {
+  \usepackage{amssymb}
+  \usepackage{amsmath}
+  \usepackage{algorithm}
+  \usepackage[noend]{algpseudocode}
+  \usepackage{tabularx}
+  \usepackage{array}
+  \usepackage{listings}
+  \usepackage{xurl}
+  \usepackage[table]{xcolor}
+  \usepackage{CJKutf8}
+  \usepackage{graphicx}
+  \usepackage{nicematrix}
+  \usepackage{stmaryrd}
+  \graphicspath{ {./images/} }
+  \makeatletter
+  \let\OldStatex\Statex
+  \renewcommand{\Statex}[1][3]{%
+    \setlength\@tempdima{\algorithmicindent}%
+    \OldStatex\hskip\dimexpr#1\@tempdima\relax}
+  \makeatother
+  \usepackage[normalem]{ulem}
+  \usepackage[skip=10pt plus1pt, indent=20pt]{parskip}
+  \usepackage{tikz} 
+  \usepackage{diagbox}
+  \usepackage{geometry}
+  \geometry{a4paper, margin=1in}
+  \usepackage{indentfirst}
+  \setlength{\parindent}{2em}
+  \setcounter{topnumber}{8}
+  \setcounter{bottomnumber}{8}
+  \setcounter{totalnumber}{8}
+
+  \definecolor{codegreen}{rgb}{0,0.6,0}
+  \definecolor{codegray}{rgb}{0.5,0.5,0.5}
+  \definecolor{codepurple}{rgb}{0.58,0,0.82}
+  \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+  \lstdefinestyle{mystyle}{
+      backgroundcolor=\color{backcolour},   
+      commentstyle=\color{codegreen},
+      keywordstyle=\color{magenta},
+      numberstyle=\tiny\color{codegray},
+      stringstyle=\color{codepurple},
+      basicstyle=\ttfamily\footnotesize,
+      breakatwhitespace=false,         
+      breaklines=true,                 
+      captionpos=b,                    
+      keepspaces=true,                 
+      numbers=left,                    
+      numbersep=5pt,                  
+      showspaces=false,                
+      showstringspaces=false,
+      showtabs=false,                  
+      tabsize=2
+  }
+  \lstset{style=mystyle}
+  \newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+  \def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+% }
+
+% {
+  \title{PP Final Project Report}
+  \author{
+      NG, CHUN-SING (b11902117)
+      \and
+      LIN, GUAN-CHEN (b12902154)
+      \and
+      YU, SHENG (r14922110)
+  }
+  \begin{document}
+  \maketitle
+% }
+
+\section{Introduction}
+Collision detection is a fundamental problem in real-time or large-scale simulations, requiring fast detection of intersecting objects. For $N$ objects, a naive brute-force approach requires $O(N^2)$ pairwise checks. To speed up, the detection is typically divided into two phases: broad-phase and narrow-phase. The broad-phase quickly identifies pairs that may collide, while the narrow-phase performs precise tests on these candidates.
+
+This project implements and compares two broad-phase collision detection algorithms for 2D axis-aligned bounding boxes (AABBs) on both CPU and GPU. The goal is to study their performance and scalability under different spatial distributions.
+
+\section{Method}
+\subsection{Sort-and-Sweep}
+This algorithm reduces pairwise checks by sorting AABBs along a single axis (X-axis) and maintaining an active list of potentially colliding boxes as a sweep line traverses the sorted list. Overlap tests are performed only among boxes in the active list. 
+
+\begin{algorithm}
+  \caption{Sort-and-Sweep($boxes$)}
+  \begin{algorithmic}[1]
+      \State create X-axis endpoints (start and end) for all boxes
+      \State sort endpoints by X-coordinate
+      \State $active, $pairs$ \gets$ empty lists
+      \For{each endpoint in sorted order}
+        \If{endpoint is start point}
+          \For{each box $a$ in $active$}
+            \If{box $a$ and new box overlap on Y-axis}
+              \State add pair $(a, \text{new box})$ to $pairs$
+            \EndIf
+          \EndFor
+          \State add new box to $active$
+        \Else
+          \State remove corresponding box from $active$
+        \EndIf
+      \EndFor
+      \State \Return $pairs$
+  \end{algorithmic}
+\end{algorithm}
+
+\pagebreak
+
+\subsection{Spatial Hashing}
+This approach partitions space into a uniform grid, hashing AABBs into cells based on position, and only testing collisions among boxes within the same or neighboring cells. This reduces candidate pair counts by partitioning the spatial domain.
+
+\begin{algorithm}
+  \caption{Spatial-Hashing($boxes$)}
+  \begin{algorithmic}[1]
+      \State compute cell size $L$ based on average box dimensions
+      \State hash all boxes into a spatial grid based on their positions
+      \State $pairs \gets$ empty list
+      \For{each cell in grid}
+        \State gather boxes from current cell and 3×3 neighboring cells
+        \For{each pair of gathered boxes}
+          \If{boxes overlap}
+            \State add pair to $pairs$
+          \EndIf
+        \EndFor
+      \EndFor
+      \State \Return $pairs$
+  \end{algorithmic}
+\end{algorithm}
+
+\subsection{Parallelization Strategy}
+For \textbf{Sort-and-Sweep}, the GPU implementation decomposes the algorithm into three steps: (1) create X-axis endpoints with one thread per AABB, (2) perform parallel sorting using Thrust's radix sort, and (3) sweep and test with one thread per array element, checking Y-axis overlaps serially within each thread's scope.
+
+For \textbf{Spatial Hashing}, the GPU implementation parallelizes the grid construction phase by distributing box hashing across threads, then performs parallel collision testing where threads process independent cells concurrently without explicit synchronization bottlenecks.
+
+A key trade-off in GPU parallelization is the presence of \emph{redundant pair checking}. Unlike the sequential CPU versions that process pairs exactly once, the GPU versions may check the same pair multiple times:
+\begin{itemize}
+  \item In Sort-and-Sweep, when a start point is processed in parallel, multiple threads may independently perform overlap tests against boxes in the active set, leading to duplicate detection.
+  \item In Spatial Hashing, boxes spanning multiple cells are hashed into multiple cells, so the same pair may be tested from different cell perspectives by different threads.
+\end{itemize}
+
+This redundancy is a deliberate trade-off: avoiding it would require expensive synchronization barriers, while the redundant work and final deduplication often yield better overall throughput on GPUs.
+
+\pagebreak
+
+\section{Experiment}
+
+\subsection{Testcases}
+We generated 10 diverse testcases (100k to 200k boxes each) covering different spatial distributions: uniform sparse/dense, clustered, packed, grid-like, skewed object sizes, and extreme background aspect ratios. This ensures comprehensive evaluation under varied collision scenarios.
+
+\subsection{Results}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{performance_comparison.png}
+  \caption{Performance comparison across 10 testcases. Blue: Sort-and-Sweep; Orange: Spatial Hashing. Filled markers: CPU version; Cross markers: GPU version; Slash markers: GPU compute time (excluding initial memory transfer). Values exceeding 300 ms are truncated for clarity.}
+  \label{performance_comparison}
+\end{figure}
+
+Sequential benchmarks show that algorithm performance varies significantly by distribution. Sort-and-Sweep excels on axis-aligned distributions (testcase 17: wide world) but degrades on unfavorable aspect ratios (testcase 18: tall world, 14.86 s). Spatial Hashing provides more consistent performance across distributions.
+
+GPU implementations demonstrate that kernel computation consistently completes within 16 ms, indicating high theoretical efficiency. However, memory transfer overhead dominates end-to-end execution time, significantly impacting practical speedup. Parallelization successfully prevents worst-case sequential scenarios (e.g., testcase 18: 15 s $\rightarrow$ 0.25 s), demonstrating the value of GPU acceleration for pathological cases.
+
+\pagebreak
+
+\section{Conclusion}
+Our results reveal that GPU acceleration is highly effective when data remains GPU-resident, achieving 10-60× speedup with compute times consistently under 16ms (60 FPS threshold) for 100k-200k objects. However, memory transfer overhead dominates (80\% of execution time), reducing practical speedup to only 2-3×.
+
+This dichotomy has critical implications: GPU collision detection excels with GPU-resident physics pipelines but offers limited benefit when frequent CPU-GPU synchronization is required.
+
+\section{Work Distribution}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Task} & \textbf{Member} \\
+\hline
+Dataset Generation & CHUN-SING \\
+\hline
+Sequential Implementations & CHUN-SING \\
+\hline
+CUDA Sort-and-Sweep & GUAN-CHEN \\
+\hline
+CUDA Spatial Hashing & SHENG \\
+\hline
+Report Writing & CHUN-SING \\
+\hline
+Slide Preparation & CHUN-SING \\
+\hline
+Presentation & SHENG \\
+\hline
+\end{tabular}
+\caption{Work distribution among team members.}
+\label{work_distribution}
+\end{table}
+
+\section{Reference}
+\begin{itemize}
+  \item Thinking Parallel, Part I: Collision Detection on the GPU. \url{https://developer.nvidia.com/blog/thinking-parallel-part-i-collision-detection-gpu/}
+\end{itemize}
+
+\section{Github Repository}
+\url{https://github.com/peterncs97/2025-PP-Final-Project}
+
+\end{document}
