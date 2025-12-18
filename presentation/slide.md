@@ -25,15 +25,15 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 ---
 # Project Overview
 
-**Scope**: 2D bounding box
-**Algorithms**: 
-  - Sort-and-Sweep
-  - Spatial Hashing
+**Scope**: 2D bounding box  
+**Algorithms**:  
+- Sort-and-Sweep  
+- Spatial Hashing  
 
-**Implementation**: CPU and GPU
+**Implementation**: CPU and GPU  
 **Benchmark**: 10 custom testcases of 100k~200k boxes
 
-![bg right fit](images/AABB.png)
+<img src="images/AABB.png" style="width:40%; display:block; margin:0 auto;">
 
 ---
 # Sort-and-Sweep
@@ -44,7 +44,9 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 3. Maintain an active list of boxes that intersect the sweep line.
 4. Check for overlaps **only** among boxes **in the active list**.
 
-![bg right fit](images/sort-and-sweep.png)
+<div style="text-align:center; margin-top:24px;">
+  <img src="images/sort-and-sweep.png" style="width:50%;">
+</div>
 
 ---
 # Spatial Hashing
@@ -54,11 +56,33 @@ $\rightarrow$ Reduce and parallelize pairwise checks.
 - Hash boxes into cells based on their positions.
 - Only check for collisions among boxes within the **same or neighboring cells**.
 
-![bg right fit](images/uniform-grid.png)
+<div style="text-align:center; margin-top:24px;">
+  <img src="images/uniform-grid.png" style="width:50%;">
+</div>
+
+---
+# Test Cases
+<div style="display:flex; gap:32px; justify-content:center; align-items:center;">
+
+<img src="images/11_highlighted.png" style="width:45%;">
+<img src="images/13_highlighted.png" style="width:45%;">
+
+</div>
+
+---
+# Test Cases
+<div style="display:flex; gap:32px; justify-content:center; align-items:center;">
+
+<img src="images/15_highlighted.png" style="width:45%;">
+<img src="images/18_highlighted.png" style="width:45%;">
+
+</div>
 
 ---
 # Benchmark Results
-![center w:1000](images/performance_comparison.png)
+<div style="text-align:center; margin-top:24px;">
+  <img src="images/performance_comparison.png" style="width:90%;">
+</div>
 
 ---
 # Discussion
